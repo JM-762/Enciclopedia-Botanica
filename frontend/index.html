@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enciclopédia Botânica</title>
-    <meta name="description" content="Consulte e contribua para uma enciclopédia de plantas.">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
@@ -18,52 +16,30 @@
     <main class="container">
         <div class="main-content">
             <section class="plantas-section">
-                <div class="header-section">
-                    <h2>Consulte o Acervo</h2>
-                    <input type="search" id="search-input" placeholder="Buscar por nome popular, científico, família...">
-                </div>
-                <div id="plantas-grid">
-                    </div>
+                <h2>Consulte o Acervo</h2>
+                <input type="search" id="search-input" placeholder="Buscar por nome popular, científico, família...">
+                <div id="plantas-grid"></div>
             </section>
 
             <aside class="form-section">
                 <h2>Adicionar Nova Planta</h2>
-                <p>Contribua com uma nova planta para a enciclopédia.</p>
                 <form id="planta-form">
-                    <input type="hidden" id="planta_id" value=""> 
-
-                    <div class="form-group">
-                        <label for="nome_popular">Nome Popular</label>
-                        <input type="text" id="nome_popular" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="nome_cientifico">Nome Científico</label>
-                        <input type="text" id="nome_cientifico" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="familia">Família</label>
-                        <input type="text" id="familia" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="origem">Origem</label>
-                        <input type="text" id="origem" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="cuidados">Instruções de Cuidado</label>
-                        <textarea id="cuidados" rows="4" required></textarea>
-                    </div>
+                    <input type="hidden" id="planta_id"> 
+                    
+                    <div class="form-group"><label for="nome_popular">Nome Popular</label><input type="text" id="nome_popular" required></div>
+                    <div class="form-group"><label for="nome_cientifico">Nome Científico</label><input type="text" id="nome_cientifico" required></div>
+                    <div class="form-group"><label for="familia">Família</label><input type="text" id="familia" required></div>
+                    <div class="form-group"><label for="origem">Origem</label><input type="text" id="origem" required></div>
+                    <div class="form-group"><label for="cuidados">Instruções de Cuidado</label><textarea id="cuidados" rows="4" required></textarea></div>
+                    
                     <div class="form-buttons">
-                        <button type="submit" class="btn-save" id="submit-btn">Adicionar à Enciclopédia</button>
+                        <button type="submit" class="btn-save" id="submit-btn">Adicionar</button>
                         <button type="button" class="btn-clear" id="clear-btn">Limpar</button>
                     </div>
                 </form>
             </aside>
         </div>
     </main>
-
-    <footer class="container">
-        <p>Trabalho Final de Frontend e Backend &copy; 2025 - Nomes do Trio</p>
-    </footer>
     
     <script src="script.js"></script>
 </body>

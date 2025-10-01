@@ -1,84 +1,49 @@
-# app/crud/crud.py
+# app/crud/crud.py - Lógica de Interação com o Banco de Dados
 
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from typing import List
-from app.models import models 
+from app.models import models
 from app.schemas import schemas
 
-# ----------------------------------
-# Funções de Leitura (GET)
-# ----------------------------------
-
+# Consulta uma planta pelo ID (Usado para UPDATE, DELETE e GET por ID)
 def get_planta(db: Session, planta_id: int):
-    """Consulta uma planta pelo ID."""
-    db_planta = db.query(models.Planta).filter(models.Planta.id == planta_id).first()
-    if db_planta is None:
-        raise HTTPException(status_code=404, detail="Planta não encontrada na enciclopédia")
-    return db_planta
+    # Filtra a tabela Planta pelo ID e retorna o primeiro resultado
+    return db.query(models.Planta).filter(models.Planta.id == planta_id).first()
 
+# Consulta todas as plantas (Usado para listar o acervo)
 def get_plantas(db: Session, skip: int = 0, limit: int = 100):
-    """Lista todas as plantas, com paginação opcional."""
-    return db.query(models.Planta).order_by(models.Planta.id).offset(skip).limit(limit).all()
+    # Retorna todas as plantas, aplicando paginação básica (offset e limit)
+    return db.query(models.Planta).offset(skip).limit(limit).all()
 
-# ----------------------------------
-# Função de Criação (POST) - Com Validação de Unicidade
-# ----------------------------------
+# Consulta uma planta pelo nome científico (Usado para checar duplicidade na criação/edição)
+def get_planta_by_nome_cientifico(db: Session, nome_cientifico: str):
+    return db.query(models.Planta).filter(models.Planta.nome_cientifico == nome_cientifico).first()
 
+# CRIAÇÃO (CREATE)
 def create_planta(db: Session, planta: schemas.PlantaCreate):
-    """Inclui uma nova planta no banco, verificando a unicidade do nome científico."""
+    # Cria uma instância do modelo do DB a partir dos dados do schema Pydantic
+    db_planta = models.Planta(**planta.dict())
     
-    # Validação de Negócio (Unicidade do Nome Científico)
-    db_planta = db.query(models.Planta).filter(models.Planta.nome_cientifico == planta.nome_cientifico).first()
-    if db_planta:
-        raise HTTPException(status_code=400, detail="Nome científico já cadastrado na enciclopédia.")
-
-    # Criação da nova planta
-    db_planta = models.Planta(**planta.model_dump())
+    # Adiciona o objeto à sessão
     db.add(db_planta)
+    # Persiste a mudança no banco de dados (commit)
     db.commit()
     db.refresh(db_planta)
+    
     return db_planta
 
-# ----------------------------------
-# Função de Atualização (PUT) - COM VALIDAÇÃO DE NEGÓCIO DE UNICIDADE
-# ----------------------------------
-
-def update_planta(db: Session, planta_id: int, planta_update: schemas.PlantaUpdate):
-    """Atualiza uma planta existente, incluindo a verificação de unicidade no nome científico."""
-    
-    # 1. Tenta encontrar a planta (trata o 404)
-    db_planta = get_planta(db, planta_id) 
-    
-    # 2. VALIDAÇÃO DE NEGÓCIO: Checar unicidade do novo nome científico
-    if planta_update.nome_cientifico and planta_update.nome_cientifico != db_planta.nome_cientifico:
-        planta_existente = db.query(models.Planta).filter(
-            models.Planta.nome_cientifico == planta_update.nome_cientifico
-        ).filter(
-            models.Planta.id != planta_id 
-        ).first()
-        
-        if planta_existente:
-            raise HTTPException(status_code=400, detail="Nome científico já está em uso por outra planta.")
-
-    # 3. Atualização dos campos
-    update_data = planta_update.model_dump(exclude_unset=True) 
-    for key, value in update_data.items():
+# ATUALIZAÇÃO (UPDATE)
+def update_planta(db: Session, db_planta: models.Planta, planta_data: schemas.PlantaUpdate):
+    # Itera sobre os dados recebidos para atualizar os atributos do objeto no DB
+    for key, value in planta_data.dict().items():
         setattr(db_planta, key, value)
         
     db.commit()
     db.refresh(db_planta)
     return db_planta
 
-# ----------------------------------
-# Função de Exclusão (DELETE)
-# ----------------------------------
-
-def delete_planta(db: Session, planta_id: int):
-    """Exclui uma planta pelo ID."""
-    
-    db_planta = get_planta(db, planta_id)
-
+# EXCLUSÃO (DELETE)
+def delete_planta(db: Session, db_planta: models.Planta):
+    # Exclui o objeto da sessão
     db.delete(db_planta)
     db.commit()
     return db_planta

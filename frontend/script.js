@@ -1,151 +1,124 @@
-// --- CONFIGURAÇÃO ---
-const API_URL = 'http://127.0.0.1:8000';
+// CONFIGURAÇÃO
+const API_URL = 'http://127.0.0.1:8000'; // URL base da API
+let acervo = []; // Array para armazenar todas as plantas buscadas
 
-// --- VARIÁVEL GLOBAL PARA GUARDAR O ACERVO COMPLETO ---
-let acervoCompleto = [];
-
-// --- SELETORES DE ELEMENTOS DO HTML ---
-const plantasGrid = document.getElementById('plantas-grid');
+// SELETORES DE ELEMENTOS
+const grid = document.getElementById('plantas-grid');
 const form = document.getElementById('planta-form');
-const nomePopularInput = document.getElementById('nome_popular');
-const nomeCientificoInput = document.getElementById('nome_cientifico');
-const familiaInput = document.getElementById('familia');
-const origemInput = document.getElementById('origem');
-const cuidadosInput = document.getElementById('cuidados');
-const clearBtn = document.getElementById('clear-btn');
 const searchInput = document.getElementById('search-input');
-
-// NOVOS SELETORES PARA EDIÇÃO
-const plantaIdInput = document.getElementById('planta_id');
+const idInput = document.getElementById('planta_id'); // Campo oculto que guarda o ID para edição
 const submitBtn = document.getElementById('submit-btn');
 
-
-// --- FUNÇÕES AUXILIARES DE FORMULÁRIO ---
-
-// Limpa o formulário e reseta para o modo "Adicionar"
-const clearForm = () => {
-    form.reset();
-    plantaIdInput.value = ''; // Limpa o ID oculto
-    submitBtn.textContent = 'Adicionar à Enciclopédia'; // Reseta o texto do botão
+// Mapeamento dos inputs do formulário para facilitar a coleta de dados
+const inputs = {
+    nome_popular: document.getElementById('nome_popular'),
+    nome_cientifico: document.getElementById('nome_cientifico'),
+    familia: document.getElementById('familia'),
+    origem: document.getElementById('origem'),
+    cuidados: document.getElementById('cuidados')
 };
 
-// Carrega os dados da planta selecionada para o formulário
-const loadFormForEdit = (planta) => {
-    plantaIdInput.value = planta.id;
-    nomePopularInput.value = planta.nome_popular;
-    nomeCientificoInput.value = planta.nome_cientifico;
-    familiaInput.value = planta.familia;
-    origemInput.value = planta.origem;
-    cuidadosInput.value = planta.cuidados;
-    
-    submitBtn.textContent = 'Salvar Alterações'; // Muda o texto do botão para indicar edição
+// --- FUNÇÕES UTILS ---
+
+// Limpa o formulário e o reseta para o modo "Adicionar"
+const clearForm = () => {
+    form.reset();
+    idInput.value = ''; // Limpa o ID oculto
+    submitBtn.textContent = 'Adicionar'; // Volta o texto do botão
+};
+
+// Carrega os dados de uma planta selecionada no formulário para edição (PUT)
+const loadForm = (planta) => {
+    idInput.value = planta.id;
+    // Preenche todos os campos do formulário usando o mapeamento
+    for (const key in inputs) {
+        inputs[key].value = planta[key];
+    }
+    submitBtn.textContent = 'Salvar Alterações'; // Sinaliza o modo edição
     window.scrollTo({ top: 0, behavior: 'smooth' }); // Rola para o formulário
 };
 
-
 // --- FUNÇÕES DA API (CRUD) ---
 
-// LER todo o acervo da API
+// (READ) Busca todas as plantas na API e as exibe
 const fetchPlantas = async () => {
     try {
-        const response = await fetch(`${API_URL}/plantas/`);
-        if (!response.ok) throw new Error('Erro ao buscar plantas');
-        acervoCompleto = await response.json();
-        displayPlantas(acervoCompleto);
-    } catch (error) {
-        console.error('Falha ao buscar plantas:', error);
-        plantasGrid.innerHTML = '<p style="color: red;">Não foi possível carregar o acervo. A API está rodando?</p>';
+        const res = await fetch(`${API_URL}/plantas/`);
+        acervo = await res.json();
+        displayPlantas(acervo);
+    } catch (e) {
+        grid.innerHTML = `<p style="color: red;">API Offline. Verifique se o backend está rodando.</p>`;
     }
 };
 
-// INCLUIR (POST) ou ALTERAR (PUT)
-const handleFormSubmit = async (event) => {
-    event.preventDefault();
-    if (!form.checkValidity()) {
-        alert("Por favor, preencha todos os campos obrigatórios.");
-        return;
+// (CREATE/UPDATE) Manipula o envio do formulário, decidindo se é POST ou PUT
+const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    const id = idInput.value;
+    // Decide o método e URL: Se tem ID, é PUT (EDIÇÃO); senão, é POST (CRIAÇÃO)
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_URL}/plantas/${id}` : `${API_URL}/plantas/`;
+
+    // Constrói o objeto de dados a ser enviado para a API
+    const data = {};
+    for (const key in inputs) {
+        data[key] = inputs[key].value;
     }
 
-    const plantaId = plantaIdInput.value;
-    const method = plantaId ? 'PUT' : 'POST';
-    const url = plantaId ? `${API_URL}/plantas/${plantaId}` : `${API_URL}/plantas/`;
-
-    const plantaData = {
-        nome_popular: nomePopularInput.value,
-        nome_cientifico: nomeCientificoInput.value,
-        familia: familiaInput.value,
-        origem: origemInput.value,
-        cuidados: cuidadosInput.value,
-    };
-
     try {
-        const response = await fetch(url, {
+        const res = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(plantaData)
+            body: JSON.stringify(data) // Envia dados JSON
         });
 
-        // Tratamento de erros, incluindo Bad Request (400) ou Not Found (404) do backend
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || `Erro ${response.status}: Falha na operação.`);
+        if (!res.ok) {
+            // Trata erros de validação (400) ou outros erros do backend
+            const errorData = await res.json();
+            throw new Error(errorData.detail || `Erro ${res.status} na API.`);
         }
 
-        const action = plantaId ? 'atualizada' : 'adicionada';
-        alert(`Planta ${action} com sucesso!`);
-        
+        alert(`Planta ${id ? 'atualizada' : 'adicionada'} com sucesso!`);
         clearForm();
-        await fetchPlantas(); // Recarrega a lista
-
+        fetchPlantas(); // Recarrega a lista após o sucesso
     } catch (error) {
-        console.error(`Falha ao ${method === 'POST' ? 'adicionar' : 'alterar'}:`, error);
-        alert(`ERRO: ${error.message}`);
+        alert(`FALHA: ${error.message}`);
     }
 };
 
-// DELETAR uma planta
+// (DELETE) Exclui uma planta
 const deletePlanta = async (id) => {
-    if (!confirm(`Tem certeza que deseja EXCLUIR a planta com ID ${id}? Esta ação é irreversível.`)) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_URL}/plantas/${id}`, {
-            method: 'DELETE',
-        });
+    if (!confirm(`Tem certeza que deseja EXCLUIR a planta (ID: ${id})?`)) return;
 
-        if (!response.ok) {
-            // Se o backend retornou 404 (Not Found) ou 400
-            const errorData = await response.json();
-            throw new Error(errorData.detail || `Erro ${response.status}: Não foi possível deletar a planta.`);
+    try {
+        const res = await fetch(`${API_URL}/plantas/${id}`, { method: 'DELETE' });
+
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.detail || `Erro ${res.status} ao deletar.`);
         }
 
-        await fetchPlantas(); 
-        alert('Planta excluída com sucesso!');
-
+        alert('Planta excluída!');
+        fetchPlantas(); // Recarrega a lista
     } catch (error) {
-        console.error('Falha ao deletar:', error);
-        alert(`ERRO: ${error.message}`);
+        alert(`FALHA: ${error.message}`);
     }
 };
 
+// --- UI / RENDER ---
 
-// --- FUNÇÕES DA INTERFACE ---
-
-// Mostra as plantas na tela
+// Renderiza os cards das plantas na interface
 const displayPlantas = (plantas) => {
-    plantasGrid.innerHTML = '';
-    plantas.forEach(planta => {
+    grid.innerHTML = ''; // Limpa o grid
+    plantas.forEach(p => {
         const card = document.createElement('div');
         card.className = 'planta-card';
-        
         card.innerHTML = `
             <div class="card-content">
-                <h3>${planta.nome_popular}</h3>
-                <p><em>${planta.nome_cientifico}</em></p>
-                <p><strong>Família:</strong> ${planta.familia}</p>
-                <p><strong>Origem:</strong> ${planta.origem}</p>
-                <div class="cuidados"><strong>Cuidados:</strong> ${planta.cuidados}</div>
+                <h3>${p.nome_popular}</h3>
+                <p><em>${p.nome_cientifico}</em></p>
+                <p><strong>Família:</strong> ${p.familia}</p>
+                <p><strong>Cuidados:</strong> ${p.cuidados}</p>
             </div>
             <div class="card-actions">
                 <button class="btn-edit">Editar</button>
@@ -153,28 +126,33 @@ const displayPlantas = (plantas) => {
             </div>
         `;
         
-        // Adiciona os eventos aos botões
-        card.querySelector('.btn-delete').addEventListener('click', () => deletePlanta(planta.id));
-        
-        // Usa a planta inteira para carregar o formulário de edição
-        card.querySelector('.btn-edit').addEventListener('click', () => loadFormForEdit(planta)); 
-        
-        plantasGrid.appendChild(card);
+        // Atribui as funções de CRUD aos botões
+        card.querySelector('.btn-edit').addEventListener('click', () => loadForm(p));
+        card.querySelector('.btn-delete').addEventListener('click', () => deletePlanta(p.id));
+        grid.appendChild(card);
     });
 };
 
-const handleSearch = (event) => {
-    const searchTerm = event.target.value.toLowerCase();
-    const plantasFiltradas = acervoCompleto.filter(planta => 
-        planta.nome_popular.toLowerCase().includes(searchTerm) || 
-        planta.nome_cientifico.toLowerCase().includes(searchTerm) ||
-        planta.familia.toLowerCase().includes(searchTerm)
+// Filtra plantas com base no input de busca
+const handleSearch = (e) => {
+    const term = e.target.value.toLowerCase();
+    const filtered = acervo.filter(p => 
+        p.nome_popular.toLowerCase().includes(term) || 
+        p.nome_cientifico.toLowerCase().includes(term)
     );
-    displayPlantas(plantasFiltradas);
+    displayPlantas(filtered);
 };
 
 // --- EVENT LISTENERS ---
+
+// Carrega as plantas quando a página for totalmente carregada
 document.addEventListener('DOMContentLoaded', fetchPlantas);
-form.addEventListener('submit', handleFormSubmit); // Chama a função UNIFICADA (POST/PUT)
-clearBtn.addEventListener('click', clearForm);
+
+// Envia o formulário (POST/PUT)
+form.addEventListener('submit', handleFormSubmit);
+
+// Limpa o formulário
+document.getElementById('clear-btn').addEventListener('click', clearForm);
+
+// Executa a busca em tempo real
 searchInput.addEventListener('input', handleSearch);
