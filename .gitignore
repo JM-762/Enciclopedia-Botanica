@@ -1,0 +1,13 @@
+# .gitignore
+
+# Ambientes virtuais
+venv/
+.env
+
+# Arquivos de banco de dados locais
+*.db
+
+# Cache e logs do Python
+__pycache__/
+*.pyc
+*.log
